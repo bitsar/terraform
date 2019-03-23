@@ -1,8 +1,13 @@
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Provider and Region configuration
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 provider "aws" {
   region = "ap-southeast-2"
 }
 
-# Variables and data declarations
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Variables declarations
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 variable "server_port" {
   description = "The port the server will use for HTTP requests"
   default = 8080
@@ -13,14 +18,20 @@ variable "web_port" {
   default = 80
 }
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Enumerate all AZs in provider.region
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 data "aws_availability_zones" "all" {}
 
-# Resources
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Baseline cluster instance type/flavour
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 resource "aws_instance" "example" {
-  # standard free tier Ubuntu Linux marketplace AMI_ID
+  # Standard free tier Ubuntu Linux marketplace AMI_ID
   ami = "ami-0b76c3b150c6b1423"
   instance_type = "t2.micro"
 
+  # Start webserver background process with no hangup
   user_data = <<-EOF
     #!/bin/bash
     echo "Hello World!" > index.html
@@ -32,8 +43,8 @@ resource "aws_instance" "example" {
     Template = "main.tf"
   }
 
-  # interpolated instance attributes
-  # attach SG to instance (set instance parameter)
+  # Interpolated instance attributes
+  # Attach SG to instance (set instance parameter)
   vpc_security_group_ids = ["${aws_security_group.instance.id}"]
 }
 
@@ -50,6 +61,9 @@ resource "aws_security_group" "instance" {
   }
 }
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Networking resources and configuration
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 resource "aws_security_group" "elb" {
   name ="terraform-example-elb"
 
@@ -69,7 +83,6 @@ resource "aws_security_group" "elb" {
   }
 }
 
-# Networking, LBs, LCs, ASGs
 resource "aws_launch_configuration" "example" {
   image_id = "ami-0b76c3b150c6b1423"
   instance_type = "t2.micro"
@@ -125,7 +138,9 @@ resource "aws_elb" "example" {
 
 }
 
-# Console I/O
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Console I/O -: Debug 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 output "public_ip" {
     value = "${aws_instance.example.public_ip}"
     value = "${aws_elb.example.dns_name}"
