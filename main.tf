@@ -8,6 +8,11 @@ variable "server_port" {
   default = 8080
 }
 
+variable "web_port" {
+  description = "The port the ELB will use for HTTP requests"
+  default = 80
+}
+
 data "aws_availability_zones" "all" {}
 
 resource "aws_instance" "example" {
@@ -25,11 +30,12 @@ resource "aws_instance" "example" {
     Template = "main.tf"
   }
 
-  #interpolated instance attributes
-  #attach SG to instance (set instance parameter)
+  # interpolated instance attributes
+  # attach SG to instance (set instance parameter)
   vpc_security_group_ids = ["${aws_security_group.instance.id}"]
 }
 
+# Security Groups
 resource "aws_security_group" "instance" {
   name = "terraform-example-instance"
 
@@ -39,6 +45,17 @@ resource "aws_security_group" "instance" {
     protocol = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
 
+  }
+}
+
+resource "aws_security_group" "elb" {
+  name ="terraform-example-elb"
+
+  ingress {
+    from_port = "${var.web_port}"
+    to_port = "${var.web_port}"
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
@@ -70,6 +87,28 @@ resource "aws_autoscaling_group" "example" {
     value ="terraform-asg-example"
     propagate_at_launch = true
   }
+}
+
+resource "aws_elb" "example" {
+  name = "terraform-asg-example"
+  security_groups = ["${aws_security_group.elb.id}"]
+  availability_zones = ["${data.aws_availability_zones.all.names}"]
+
+  health_check {
+    healthy_threshold = 2
+    unhealthy_threshold = 2
+    timeout = 3
+    interval = 30
+    target = "HTTP:${var.server_port}/"
+  }
+
+  listener {
+    lb_port = "${var.web_port}"
+    lb_protocol = "http"
+    instance_port = "${var.server_port}"
+    instance_protocol = "http"
+  }
+
 }
 
 output "public_ip" {
