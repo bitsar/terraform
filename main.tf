@@ -53,6 +53,14 @@ resource "aws_security_group" "instance" {
 resource "aws_security_group" "elb" {
   name ="terraform-example-elb"
 
+  # Required for health_check
+  egress {
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   ingress {
     from_port = "${var.web_port}"
     to_port = "${var.web_port}"
@@ -84,6 +92,9 @@ resource "aws_autoscaling_group" "example" {
 
   min_size = 2
   max_size = 5
+
+  load_balancers =["${aws_elb.example.name}"]
+  health_check_type = "ELB"
 
   tag {
     key = "Name"
@@ -117,4 +128,5 @@ resource "aws_elb" "example" {
 # Console I/O
 output "public_ip" {
     value = "${aws_instance.example.public_ip}"
+    value = "${aws_elb.example.dns_name}"
 }
