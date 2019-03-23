@@ -6,6 +6,11 @@ provider "aws" {
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Enumerate all AZs in provider.region
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+data "aws_availability_zones" "all" {}
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Variables declarations
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 variable "server_port" {
@@ -19,36 +24,9 @@ variable "web_port" {
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Enumerate all AZs in provider.region
+# Networking resources and configuration
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-data "aws_availability_zones" "all" {}
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Baseline cluster instance type/flavour
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-resource "aws_instance" "example" {
-  # Standard free tier Ubuntu Linux marketplace AMI_ID
-  ami = "ami-0b76c3b150c6b1423"
-  instance_type = "t2.micro"
-
-  # Start webserver background process with no hangup
-  user_data = <<-EOF
-    #!/bin/bash
-    echo "Hello World!" > index.html
-    nohup busybox httpd -f -p "${var.server_port}" &
-    EOF
-
-  tags {
-    Name ="terraform-example"
-    Template = "main.tf"
-  }
-
-  # Interpolated instance attributes
-  # Attach SG to instance (set instance parameter)
-  vpc_security_group_ids = ["${aws_security_group.instance.id}"]
-}
-
-# Security Groups
+# Instance Security Groups
 resource "aws_security_group" "instance" {
   name = "terraform-example-instance"
 
@@ -61,9 +39,7 @@ resource "aws_security_group" "instance" {
   }
 }
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Networking resources and configuration
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ELB Security Groups
 resource "aws_security_group" "elb" {
   name ="terraform-example-elb"
 
@@ -83,11 +59,17 @@ resource "aws_security_group" "elb" {
   }
 }
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Operational & Runtime
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Launch Configurations
 resource "aws_launch_configuration" "example" {
+  # Standard free tier Ubuntu Linux marketplace AMI_ID
   image_id = "ami-0b76c3b150c6b1423"
   instance_type = "t2.micro"
   security_groups = ["${aws_security_group.instance.id}"]
 
+  # Start busybox http/webserver as background process with no
   user_data = <<-EOF
     #!/bin/bash
     echo "Hello World!" > index.html
@@ -99,6 +81,7 @@ resource "aws_launch_configuration" "example" {
     }
 }
 
+#Auto-scaling Groups
 resource "aws_autoscaling_group" "example" {
   launch_configuration = "${aws_launch_configuration.example.id}"
   availability_zones = ["${data.aws_availability_zones.all.names}"]
@@ -139,7 +122,7 @@ resource "aws_elb" "example" {
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Console I/O -: Debug 
+# Console I/O -: Debug
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 output "public_ip" {
     value = "${aws_instance.example.public_ip}"
