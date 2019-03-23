@@ -2,11 +2,13 @@ provider "aws" {
   region = "ap-southeast-2"
 }
 
-# Variables
+# Variables and declarations
 variable "server_port" {
   description = "The port the server will use for HTTP requests"
   default = 8080
 }
+
+data "aws_availability_zones" "all" {}
 
 resource "aws_instance" "example" {
   ami = "ami-0b76c3b150c6b1423"
@@ -58,6 +60,7 @@ resource "aws_launch_configuration" "example" {
 
 resource "aws_autoscaling_group" "example" {
   launch_configuration = "${aws_launch_configuration.example.id}"
+  availability_zones = ["${data.aws_availability_zones.all.names}"]
 
   min_size = 2
   max_size = 5
