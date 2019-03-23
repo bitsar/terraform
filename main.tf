@@ -2,7 +2,7 @@ provider "aws" {
   region = "ap-southeast-2"
 }
 
-# Variables and declarations
+# Variables and data declarations
 variable "server_port" {
   description = "The port the server will use for HTTP requests"
   default = 8080
@@ -15,7 +15,9 @@ variable "web_port" {
 
 data "aws_availability_zones" "all" {}
 
+# Resources
 resource "aws_instance" "example" {
+  # standard free tier Ubuntu Linux marketplace AMI_ID
   ami = "ami-0b76c3b150c6b1423"
   instance_type = "t2.micro"
 
@@ -59,6 +61,7 @@ resource "aws_security_group" "elb" {
   }
 }
 
+# Networking, LBs, LCs, ASGs
 resource "aws_launch_configuration" "example" {
   image_id = "ami-0b76c3b150c6b1423"
   instance_type = "t2.micro"
@@ -111,6 +114,7 @@ resource "aws_elb" "example" {
 
 }
 
+# Console I/O
 output "public_ip" {
     value = "${aws_instance.example.public_ip}"
 }
