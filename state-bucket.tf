@@ -9,24 +9,11 @@ resource "aws_s3_bucket" "terraform_state_repo" {
   }
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
 
   tags {
     Name = "Remote s3 storage to manange Terraform state files"
   }
 
-}
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Create Terraform backend resource for state management
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-terraform {
-  backend "s3" {
-    encrypt = true
-    bucket = "terraform-state-repo"
-    dynamodb_table = "terraform_state_lock"
-    region = "ap-southeast-2"
-    key = "terraform.tfstate"
-  }
 }
